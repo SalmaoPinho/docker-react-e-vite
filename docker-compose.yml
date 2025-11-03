@@ -1,0 +1,87 @@
+services:
+
+  # SERVIÇO NGINX#
+  nginx:
+    container_name: nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "${NGINX_PORT}:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - net_web
+
+  # SERVIÇO FRONTEND (React Vite)#
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    networks:
+      - net_web
+    depends_on:
+      - backend
+  # SERVICO BACKEND (NestJS)#
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    networks:
+      - net_web
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+  # SERVIÇO DATABASE (PostgreSQL)#
+  postgres:
+    container_name: postgres
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - net_web
+  # SERVIÇO PGADMIN#
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+          - PGADMIN_CONFIG_WTF_CSRF_ENABLED=False 
+    ports:
+      - "8880:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - net_web
+    depends_on:
+      - postgres
+    restart: unless-stopped
+      
+networks:
+  net_web:
+    driver: bridge
+volumes:
+  postgres_data:
+  pgadmin_data:
